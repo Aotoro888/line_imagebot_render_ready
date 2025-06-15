@@ -1,17 +1,21 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, abort, render_template
 from dotenv import load_dotenv
-import os, sqlite3, datetime, re
+import os, sqlite3, datetime, traceback
 
-from linebot.v3.messaging import MessagingApi, ReplyMessageRequest, TextMessage
+from linebot.v3.messaging import (
+    MessagingApi, ReplyMessageRequest, TextMessage as V3TextMessage,
+    Configuration, ApiClient
+)
 from linebot.v3.webhook import WebhookHandler
-from linebot.v3.webhooks import MessageEvent
 from linebot.v3.exceptions import InvalidSignatureError
+from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
 load_dotenv()
 CHANNEL_SECRET = os.getenv("CHANNEL_SECRET")
 CHANNEL_ACCESS_TOKEN = os.getenv("CHANNEL_ACCESS_TOKEN")
 
-line_bot_api = MessagingApi(CHANNEL_ACCESS_TOKEN)
+configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
+line_bot_api = MessagingApi(ApiClient(configuration))
 handler = WebhookHandler(CHANNEL_SECRET)
 
 app = Flask(__name__)
@@ -20,83 +24,68 @@ os.makedirs("static/images", exist_ok=True)
 def init_db():
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS submissions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            house_number TEXT,
-            month_year TEXT,
-            image_path TEXT,
-            timestamp TEXT
-        )
-    ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT,
+        image_path TEXT,
+        timestamp TEXT
+    )''')
     conn.commit()
     conn.close()
 
 init_db()
 
-@app.route('/')
+@app.route("/")
 def index():
     conn = sqlite3.connect("database.db")
     c = conn.cursor()
-    c.execute("SELECT * FROM submissions ORDER BY timestamp DESC")
+    c.execute("SELECT * FROM data ORDER BY timestamp DESC")
     rows = c.fetchall()
     conn.close()
-    return render_template("index.html", data=rows)
+    return render_template("index.html", rows=rows)
 
 @app.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature")
     body = request.get_data(as_text=True)
-
     print("✅ [DEBUG] Received LINE Webhook")
 
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        print("❌ Invalid signature.")
-        return "Invalid signature", 400
+        print("❌ Invalid signature!")
+        abort(400)
+    except Exception:
+        print("🔥 EXCEPTION OCCURRED:")
+        print(traceback.format_exc())
+        abort(500)
 
-    return "OK", 200
+    return "OK"
 
 @handler.add(MessageEvent)
 def handle_message(event):
-    msg_type = event.message.type
-    msg_id = event.message.id
+    text = None
 
-    if msg_type == "text":
+    if isinstance(event.message, TextMessageContent):
         text = event.message.text
-        house_number, month_year = extract_info(text)
-
-        if house_number and month_year:
-            conn = sqlite3.connect("database.db")
-            c = conn.cursor()
-            c.execute("INSERT INTO submissions (house_number, month_year, image_path, timestamp) VALUES (?, ?, ?, ?)",
-                      (house_number, month_year, None, datetime.datetime.now().isoformat()))
-            conn.commit()
-            conn.close()
-
-            reply = TextMessage(text="✅ ข้อมูลบันทึกแล้ว")
-            line_bot_api.reply_message(
-                ReplyMessageRequest(reply_token=event.reply_token, messages=[reply])
+        reply = V3TextMessage(text=f"✅ รับข้อความแล้ว: {text}")
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[reply]
             )
+        )
 
-    elif msg_type == "image":
-        image_response = line_bot_api.get_message_content(msg_id)
-        filename = f"{msg_id}.jpg"
-        path = f"static/images/{filename}"
-        with open(path, "wb") as f:
-            for chunk in image_response.iter_content():
-                f.write(chunk)
-
+    if text:
         conn = sqlite3.connect("database.db")
         c = conn.cursor()
-        c.execute("INSERT INTO submissions (house_number, month_year, image_path, timestamp) VALUES (?, ?, ?, ?)",
-                  (None, None, path, datetime.datetime.now().isoformat()))
+        c.execute("INSERT INTO data (text, image_path, timestamp) VALUES (?, ?, ?)", (
+            text,
+            None,
+            datetime.datetime.now().isoformat()
+        ))
         conn.commit()
         conn.close()
 
-def extract_info(text):
-    match = re.search(r'(\d+/\d+)\s*(.+\d{2})', text)
-    if match:
-        return match.group(1), match.group(2)
-    return None, None
+if __name__ == "__main__":
+    app.run(debug=True)
