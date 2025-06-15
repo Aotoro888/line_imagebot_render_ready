@@ -1,28 +1,38 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LINE Submissions</title>
+    <title>LINE Image Bot Records</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #333; color: white; }
+        img { width: 200px; }
+    </style>
 </head>
 <body>
-    <h1>📋 รายการข้อมูลจาก LINE</h1>
-    <table border="1" cellpadding="5">
-        <tr><th>ID</th><th>บ้านเลขที่</th><th>เดือน/ปี</th><th>ภาพ</th><th>เวลา</th></tr>
-        {% for row in data %}
-        <tr>
-            <td>{{ row[0] }}</td>
-            <td>{{ row[1] or '-' }}</td>
-            <td>{{ row[2] or '-' }}</td>
-            <td>
-                {% if row[3] %}
-                    <img src="{{ row[3] }}" width="100">
-                {% else %}
-                    -
-                {% endif %}
-            </td>
-            <td>{{ row[4] }}</td>
-        </tr>
-        {% endfor %}
+    <h2>📋 ข้อมูลที่บันทึกไว้</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>เลขที่บ้าน</th>
+                <th>เดือน/ปี</th>
+                <th>รูปภาพ</th>
+                <th>วันที่บันทึก</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+            <tr>
+                <td>{{ record[0] }}</td>
+                <td>{{ record[1] }}</td>
+                <td><img src="{{ url_for('static', filename='images/' + record[2].split('/')[-1]) }}"></td>
+                <td>{{ record[3] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
 </body>
 </html>
+
