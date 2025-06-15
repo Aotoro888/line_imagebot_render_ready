@@ -4,35 +4,33 @@
     <meta charset="UTF-8">
     <title>LINE Image Bot Records</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-        th { background-color: #333; color: white; }
-        img { width: 200px; }
+        body { font-family: Arial, sans-serif; background: #f0f0f0; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
+        img { width: 150px; }
     </style>
 </head>
 <body>
-    <h2>📋 ข้อมูลที่บันทึกไว้</h2>
+    <h2>📸 LINE Image Bot Records</h2>
     <table>
         <thead>
             <tr>
-                <th>เลขที่บ้าน</th>
-                <th>เดือน/ปี</th>
-                <th>รูปภาพ</th>
-                <th>วันที่บันทึก</th>
+                <th>House Number</th>
+                <th>Month/Year</th>
+                <th>Image</th>
+                <th>Timestamp</th>
             </tr>
         </thead>
         <tbody>
-            {% for record in records %}
+            {% for row in records %}
             <tr>
-                <td>{{ record[0] }}</td>
-                <td>{{ record[1] }}</td>
-                <td><img src="{{ url_for('static', filename='images/' + record[2].split('/')[-1]) }}"></td>
-                <td>{{ record[3] }}</td>
+                <td>{{ row[1] }}</td>
+                <td>{{ row[2] }}</td>
+                <td><img src="{{ url_for('static', filename='images/' + row[3].split('/')[-1]) }}"></td>
+                <td>{{ row[4] }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </body>
 </html>
-
