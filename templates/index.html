@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LINE Submissions</title>
+</head>
+<body>
+    <h1>📋 รายการข้อมูลจาก LINE</h1>
+    <table border="1" cellpadding="5">
+        <tr><th>ID</th><th>บ้านเลขที่</th><th>เดือน/ปี</th><th>ภาพ</th><th>เวลา</th></tr>
+        {% for row in data %}
+        <tr>
+            <td>{{ row[0] }}</td>
+            <td>{{ row[1] or '-' }}</td>
+            <td>{{ row[2] or '-' }}</td>
+            <td>
+                {% if row[3] %}
+                    <img src="{{ row[3] }}" width="100">
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ row[4] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
